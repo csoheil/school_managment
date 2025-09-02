@@ -2,6 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('index.blade.php');
+Route::get('/test', function () {
+return view('test');
 });
