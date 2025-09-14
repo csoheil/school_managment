@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClassModel;
+use App\Models\Schedule;
 use App\Models\Attendance;
+use App\Models\Exam;
 use App\Models\Grade;
-use App\Models\Class;
+use App\Models\Subject;
 use Illuminate\Http\Request;
 
 /**
@@ -25,8 +28,26 @@ class TeacherController extends Controller
      */
     public function index()
     {
-        $classes = Class::where('teacher_id', auth()->id())->get();
+        $classes = ClassModel::where('teacher_id', auth()->id())->get();
         return view('teacher.dashboard', compact('classes'));
+    }
+
+    /**
+     * View classes assigned to the teacher.
+     */
+    public function viewClasses()
+    {
+        $classes = ClassModel::where('teacher_id', auth()->id())->get();
+        return view('teacher.classes', compact('classes'));
+    }
+
+    /**
+     * View weekly schedule for teacher's classes.
+     */
+    public function viewSchedule()
+    {
+        $schedules = Schedule::whereIn('class_id', auth()->user()->taughtClasses->pluck('id'))->get();
+        return view('teacher.schedule', compact('schedules'));
     }
 
     /**
@@ -51,6 +72,27 @@ class TeacherController extends Controller
     }
 
     /**
+     * Create a new exam.
+     */
+    public function createExam(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'class_id' => 'required|exists:classes,id',
+            'due_date' => 'required|date|after:now',
+        ]);
+
+        Exam::create([
+            'title' => $request->title,
+            'class_id' => $request->class_id,
+            'teacher_id' => auth()->id(),
+            'due_date' => $request->due_date,
+        ]);
+
+        return redirect()->route('teacher.dashboard')->with('success', 'Exam created successfully.');
+    }
+
+    /**
      * Add grade for a student in a subject.
      */
     public function addGrade(Request $request, $classId)
@@ -70,5 +112,14 @@ class TeacherController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Grade added successfully.');
+    }
+
+    /**
+     * Manage subjects assigned to the teacher.
+     */
+    public function manageSubjects()
+    {
+        $subjects = Subject::where('teacher_id', auth()->id())->get();
+        return view('teacher.subjects', compact('subjects'));
     }
 }
