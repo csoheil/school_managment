@@ -2,52 +2,44 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    use Spatie\Permission\Traits\HasRoles;
-        class User extends Authenticatable {
     use HasRoles;
-    protected $fillable = ['name', 'email', 'password', 'avatar'];
-};
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+
+    protected $fillable = ['name', 'email', 'password', 'role', 'avatar'];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
+     * Get the classes the user is enrolled in (for students).
      */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    public function classes()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->belongsToMany(ClassModel::class, 'class_student', 'student_id', 'class_id');
+    }
+
+    /**
+     * Get the classes taught by the user (for teachers).
+     */
+    public function taughtClasses()
+    {
+        return $this->hasMany(ClassModel::class, 'teacher_id');
+    }
+
+    /**
+     * Get the grades of the user.
+     */
+    public function grades()
+    {
+        return $this->hasMany(Grade::class, 'user_id');
+    }
+
+    /**
+     * Get the attendances of the user.
+     */
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class, 'user_id');
     }
 }
