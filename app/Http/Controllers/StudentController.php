@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Attendance;
+use App\Models\ClassModel;
+use App\Models\Schedule;
 use App\Models\Grade;
+use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -21,13 +23,48 @@ class StudentController extends Controller
     }
 
     /**
-     * Display the student dashboard with grades and attendance.
+     * Display the student dashboard.
      */
     public function index()
     {
+        $classes = auth()->user()->classes;
+        return view('student.dashboard', compact('classes'));
+    }
+
+    /**
+     * View classes enrolled by the student.
+     */
+    public function viewClasses()
+    {
+        $classes = auth()->user()->classes;
+        return view('student.classes', compact('classes'));
+    }
+
+    /**
+     * View weekly schedule for student's classes.
+     */
+    public function viewSchedule()
+    {
+        $schedules = Schedule::whereIn('class_id', auth()->user()->classes->pluck('id'))->get();
+        return view('student.schedule', compact('schedules'));
+    }
+
+    /**
+     * View student's report card.
+     */
+    public function viewReportCard()
+    {
         $grades = Grade::where('user_id', auth()->id())->with('subject')->get();
+        return view('student.report_card', compact('grades'));
+    }
+
+    /**
+     * View student's attendance.
+     */
+    public function viewAttendance()
+    {
         $attendances = Attendance::where('user_id', auth()->id())->with('class')->get();
-        return view('student.dashboard', compact('grades', 'attendances'));
+        return view('student.attendance', compact('attendances'));
     }
 
     /**
