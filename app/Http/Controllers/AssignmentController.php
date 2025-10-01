@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Assignment;
-use App\Models\Class;
+use App\Models\Class as SchoolClass;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -39,7 +39,7 @@ class AssignmentController extends Controller
     public function create()
     {
         $this->middleware('role:teacher');
-        $classes = Class::where('teacher_id', auth()->id())->get();
+        $classes = SchoolClass::where('teacher_id', auth()->id())->get();
         return view('assignments.create', compact('classes'));
     }
 
