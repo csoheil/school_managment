@@ -2,116 +2,126 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreStudentRequest;
+use App\Http\Requests\UpdateStudentRequest;
 use App\Models\User;
-use App\Models\ClassModel;
-use App\Models\Schedule;
-use App\Models\Grade;
-use App\Models\Subject;
-use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-/**
- * Controller for admin-related actions.
- */
 class AdminController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     */
     public function __construct()
     {
-        $this->middleware(['auth', 'role:admin']);
+        $this->middleware(['role:admin']);
     }
 
     /**
-     * Display the admin dashboard.
+     * Display a listing of the students.
      */
-    public function index()
+    public function indexStudents(Request $request)
     {
-        $stats = [
-            'students' => User::role('student')->count(),
-            'teachers' => User::role('teacher')->count(),
-            'classes' => ClassModel::count(),
-        ];
-        return view('admin.dashboard', compact('stats'));
+        $query = User::role('student')->with(['classes', 'grades']);
+
+        // Apply filters
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%')
+                  ->orWhere('id', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        if ($request->filled('grade')) {
+            $query->whereHas('classes', function ($q) use ($request) {
+                $q->where('grade_level', $request->grade);
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $students = $query->paginate(10)->appends($request->query());
+
+        return view('admin.students.index', compact('students'));
     }
 
     /**
-     * Register a new student or teacher.
+     * Show the form for creating a new student.
      */
-    public function register(Request $request)
+    public function createStudent()
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:student,teacher',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => bcrypt($request->password),
-            'role' => $request->role,
-            'avatar' => $request->file('avatar') ? $request->file('avatar')->store('avatars', 'public') : null,
-        ]);
-
-        $user->assignRole($request->role);
-        return redirect()->route('admin.dashboard')->with('success', 'User registered successfully.');
+        $classes = \App\Models\ClassModel::all();
+        return view('admin.students.create', compact('classes'));
     }
 
     /**
-     * Create a new class.
+     * Store a newly created student in storage.
      */
-    public function createClass(Request $request)
+    public function storeStudent(StoreStudentRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'teacher_id' => 'nullable|exists:users,id',
-        ]);
+        $data = $request->validated();
+        $data['password'] = bcrypt($data['password']);
+        
+        if ($request->hasFile('avatar')) {
+            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        }
 
-        ClassModel::create([
-            'name' => $request->name,
-            'description' => $request->description,
-            'teacher_id' => $request->teacher_id,
-        ]);
+        $student = User::create($data);
+        $student->assignRole('student');
+        $student->classes()->sync($request->input('classes', []));
 
-        return redirect()->route('admin.dashboard')->with('success', 'Class created successfully.');
+        return redirect()->route('admin.students.index')->with('success', 'Student created successfully.');
     }
 
     /**
-     * Create a weekly schedule.
+     * Display the specified student.
      */
-    public function createSchedule(Request $request)
+    public function showStudent(User $student)
     {
-        $request->validate([
-            'class_id' => 'required|exists:classes,id',
-            'subject_id' => 'required|exists:subjects,id',
-            'day_of_week' => 'required|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
-            'start_time' => 'required',
-            'end_time' => 'required|after:start_time',
-        ]);
-
-        Schedule::create([
-            'class_id' => $request->class_id,
-            'subject_id' => $request->subject_id,
-            'day_of_week' => $request->day_of_week,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-        ]);
-
-        return redirect()->route('admin.dashboard')->with('success', 'Schedule created successfully.');
+        $student->load(['classes', 'grades', 'attendances']);
+        return view('admin.students.show', compact('student'));
     }
 
     /**
-     * Generate a report card for a student.
+     * Show the form for editing the specified student.
      */
-    public function generateReportCard($studentId)
+    public function editStudent(User $student)
     {
-        $grades = Grade::where('user_id', $studentId)->with('subject')->get();
-        return view('admin.report_card', compact('grades'));
+        $classes = \App\Models\ClassModel::all();
+        return view('admin.students.edit', compact('student', 'classes'));
+    }
+
+    /**
+     * Update the specified student in storage.
+     */
+    public function updateStudent(UpdateStudentRequest $request, User $student)
+    {
+        $data = $request->validated();
+        
+        if ($request->hasFile('avatar')) {
+            if ($student->avatar) {
+                Storage::disk('public')->delete($student->avatar);
+            }
+            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        $student->update($data);
+        $student->classes()->sync($request->input('classes', []));
+
+        return redirect()->route('admin.students.index')->with('success', 'Student updated successfully.');
+    }
+
+    /**
+     * Remove the specified student from storage.
+     */
+    public function destroyStudent(User $student)
+    {
+        if ($student->avatar) {
+            Storage::disk('public')->delete($student->avatar);
+        }
+        $student->delete();
+        return redirect()->route('admin.students.index')->with('success', 'Student deleted successfully.');
     }
 }
