@@ -27,8 +27,8 @@ class AdminController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%')
-                  ->orWhere('id', 'like', '%' . $request->search . '%');
+                    ->orWhere('email', 'like', '%' . $request->search . '%')
+                    ->orWhere('id', 'like', '%' . $request->search . '%');
             });
         }
 
@@ -63,7 +63,7 @@ class AdminController extends Controller
     {
         $data = $request->validated();
         $data['password'] = bcrypt($data['password']);
-        
+
         if ($request->hasFile('avatar')) {
             $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
         }
@@ -99,7 +99,7 @@ class AdminController extends Controller
     public function updateStudent(UpdateStudentRequest $request, User $student)
     {
         $data = $request->validated();
-        
+
         if ($request->hasFile('avatar')) {
             if ($student->avatar) {
                 Storage::disk('public')->delete($student->avatar);
