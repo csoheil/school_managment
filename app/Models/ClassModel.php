@@ -3,40 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ClassModel extends Model
 {
-    protected $fillable = ['name', 'description', 'teacher_id'];
+    protected $table = 'classes';
+    protected $fillable = ['name', 'description', 'teacher_id', 'grade_level'];
 
-    /**
-     * Get the teacher of the class.
-     */
-    public function teacher()
+    public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
 
-    /**
-     * Get the students enrolled in the class.
-     */
-    public function students()
+    public function students(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'class_student', 'class_id', 'student_id');
+        return $this->belongsToMany(User::class, 'class_student');
     }
 
-    /**
-     * Get the schedules of the class.
-     */
-    public function schedules()
+    public function schedules(): HasMany
     {
-        return $this->hasMany(Schedule::class, 'class_id');
-    }
-
-    /**
-     * Get the exams of the class.
-     */
-    public function exams()
-    {
-        return $this->hasMany(Exam::class, 'class_id');
+        return $this->hasMany(Schedule::class);
     }
 }
