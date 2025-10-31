@@ -4,42 +4,28 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
     use HasRoles;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'avatar'];
+    protected $fillable = ['name', 'email', 'password', 'grade_level', 'status', 'avatar'];
+    protected $hidden = ['password'];
 
-    /**
-     * Get the classes the user is enrolled in (for students).
-     */
-    public function classes()
+    public function classes(): BelongsToMany
     {
-        return $this->belongsToMany(ClassModel::class, 'class_student', 'student_id', 'class_id');
+        return $this->belongsToMany(ClassModel::class, 'class_student');
     }
 
-    /**
-     * Get the classes taught by the user (for teachers).
-     */
-    public function taughtClasses()
+    public function grades(): HasMany
     {
-        return $this->hasMany(ClassModel::class, 'teacher_id');
+        return $this->hasMany(Grade::class);
     }
 
-    /**
-     * Get the grades of the user.
-     */
-    public function grades()
+    public function attendances(): HasMany
     {
-        return $this->hasMany(Grade::class, 'user_id');
-    }
-
-    /**
-     * Get the attendances of the user.
-     */
-    public function attendances()
-    {
-        return $this->hasMany(Attendance::class, 'user_id');
+        return $this->hasMany(Attendance::class);
     }
 }
