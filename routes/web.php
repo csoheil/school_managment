@@ -31,3 +31,7 @@ Route::middleware(['auth', 'role:student'])->group(function () {
     Route::get('/student/attendance', [StudentController::class, 'viewAttendance'])->name('student.attendance');
     Route::post('/student/avatar', [StudentController::class, 'updateAvatar'])->name('student.avatar');
 });
+
+Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {
+    Route::post('/classes/{class}/attendance', [TeacherController::class, 'markAttendance'])->name('attendance.store');
+});
