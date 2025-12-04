@@ -9,6 +9,13 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
+    use Laravel\Sanctum\Sanctum;
+
+    public function boot()
+    {
+        $this->registerPolicies();
+        Sanctum::ignoreMigrations();
+    }
     public function register(): void
     {
         //
